@@ -1,6 +1,7 @@
 use std::{error::Error, time::Duration};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Message)]
+#[rtype(result = "usize")]
 pub struct ButtonChange {
     pub btn: usize,
     pub state: ButtonState,
@@ -18,6 +19,7 @@ pub enum ButtonState {
     Released,
 }
 
+use actix::Message;
 use streamdeck::StreamDeck;
 use tokio::sync::broadcast;
 

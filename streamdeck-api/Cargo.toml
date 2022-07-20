@@ -9,3 +9,5 @@ edition = "2021"
 streamdeck-interface = { path="../streamdeck-interface/", version="0.1.0" }
 hidapi = "1.4.1"
 tokio = { version = "1.19.2", features = ["full"] }
+actix = "0.13.0"
+actix-rt="2.7.0"
