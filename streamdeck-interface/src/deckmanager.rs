@@ -66,37 +66,33 @@ impl DeckManager {
         let cd = connected_devices.clone();
 
         tokio::spawn(async move {
-            {
-                loop {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    println!("Checking for available devices...");
-                    let mut ap = api.lock().unwrap();
-                    let _ = ap.refresh_devices();
-                    for dev in ap.device_list() {
-                        if dev.vendor_id() == crate::info::ELGATO_VID {
-                            println!("Found device: {:?}", dev.product_string());
-                            let pid = dev.product_id();
-                            let mut c = cd.lock().unwrap();
-
-                            if c.contains(&pid) {
-                                continue;
-                            }
-
-                            if let Ok(deck) = StreamDeck::connect_with_hid(
-                                &ap,
-                                crate::info::ELGATO_VID,
-                                pid,
-                                None,
-                            ) {
-                                println!("Connected device: {:?}", dev.product_string());
-                                let _conn =
-                                    DeckInterface::new(pid, deck, tx.clone(), fm.subscribe())
-                                        .unwrap();
-                                c.insert(pid);
-                                println!("Inserted device: {:?}", dev.product_string());
-                            };
-                        }
+            loop {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                println!("Checking for available devices...");
+                let mut ap = api.lock().unwrap();
+                let _ = ap.refresh_devices();
+                for dev in ap.device_list() {
+                    if dev.vendor_id() != crate::info::ELGATO_VID {
+                        continue;
                     }
+
+                    println!("Found Elgato device: {:?}", dev.product_string());
+                    let pid = dev.product_id();
+                    let mut c = cd.lock().unwrap();
+
+                    if c.contains(&pid) {
+                        continue;
+                    }
+
+                    if let Ok(deck) =
+                        StreamDeck::connect_with_hid(&ap, crate::info::ELGATO_VID, pid, None)
+                    {
+                        println!("Connected device: {:?}", dev.product_string());
+                        let _conn =
+                            DeckInterface::new(pid, deck, tx.clone(), fm.subscribe()).unwrap();
+                        c.insert(pid);
+                        println!("Inserted device: {:?}", dev.product_string());
+                    };
                 }
             }
         });
