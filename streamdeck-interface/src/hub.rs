@@ -8,6 +8,10 @@ use crate::{deckactor::DeckActor, deckinterface::ButtonChange};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
+pub struct Disconnect(pub u16);
+
+#[derive(Message)]
+#[rtype(result = "bool")]
 pub struct Connect {
   devid: u16,
   hub: actix::Addr<DeckHub>,
@@ -64,7 +68,20 @@ impl Handler<ButtonChange> for DeckHub {
 
   fn handle(&mut self, msg: ButtonChange, _ctx: &mut Self::Context) -> Self::Result {
     println!("[DeckHub]: received ButtonChange({}, {:?})", msg.btn, msg.state);
-    
+
     1
   }
+}
+
+impl Handler<Disconnect> for DeckHub {
+  type Result = bool;
+
+  fn handle(&mut self, msg: Disconnect, ctx: &mut Self::Context) -> Self::Result {
+    if let Some(_) = self.connected_devices.get(&msg.0) {
+      self.connected_devices.remove(&msg.0);
+      return true;      
+    }
+    false
+  } 
+
 }

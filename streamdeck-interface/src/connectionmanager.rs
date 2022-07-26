@@ -8,7 +8,6 @@ use crate::hub::{DeckHub, Connect};
 
 
 pub struct ConnectionManager {
-  connected_devices: Arc<Mutex<HashSet<u16>>>,
   hub: actix::Addr<DeckHub>,
 }
 
@@ -19,13 +18,13 @@ impl Actor for ConnectionManager {
 
 impl ConnectionManager {
   pub fn new(hub: actix::Addr<DeckHub>, mut api: HidApi) -> Self {
-    let connected_devices = Arc::new(Mutex::new(HashSet::new()));
 
     let h2 = hub.clone();
-    let devs = connected_devices.clone();
     actix_rt::spawn(async move {
+      let mut prev_connected = HashSet::new();
 
       loop {
+        let mut now_connected: HashSet<u16> = HashSet::new();
         actix_rt::time::sleep(Duration::from_secs(5)).await;
         println!("[CM] Checking for new devices...");
         let _ = api.refresh_devices();
@@ -36,23 +35,23 @@ impl ConnectionManager {
           }
           println!("Found device: {:?}", dev.product_string());
           let pid = dev.product_id();
-          let mut devs = devs.lock().unwrap();
-          if devs.contains(&pid) {
+
+          if prev_connected.contains(&pid) {
             continue;
           }
+
           if let Ok(deck) = StreamDeck::connect_with_hid(&api, crate::info::ELGATO_VID, pid, None) {
             h2.send(Connect::new(pid, h2.clone(), deck)).await.unwrap();
-            devs.insert(pid);
+            now_connected.insert(pid);
           }
 
-
-
         }
+        prev_connected = now_connected;
+        
       }
     });
 
     ConnectionManager {
-      connected_devices,
       hub,
     }
   }

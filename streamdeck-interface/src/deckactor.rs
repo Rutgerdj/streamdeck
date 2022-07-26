@@ -3,7 +3,7 @@ use std::time::Duration;
 use actix::{Actor, Message, Handler};
 use streamdeck::StreamDeck;
 
-use crate::{hub::DeckHub, deckinterface::{ButtonChange, ButtonState}};
+use crate::{hub::{DeckHub, Disconnect}, deckinterface::{ButtonChange, ButtonState}};
 
 
 
@@ -23,6 +23,11 @@ impl Actor for DeckActor {
 
   fn started(&mut self, ctx: &mut Self::Context) {
     println!("[DeckActor::{}] Started", self.devid);
+  }
+
+  fn stopping(&mut self, ctx: &mut Self::Context) -> actix::Running {
+    println!("Stopping");
+    actix::Running::Stop
   }
 }
 
@@ -46,7 +51,7 @@ impl DeckActor {
         match deck.read_buttons(Some(Duration::from_millis(10))) {
           Ok(btns) => {
             let change = Self::state_change(&prev_btn_state, &btns);
-            
+
             for c in change {
               h2.send(c).await.unwrap();
             }
@@ -54,10 +59,11 @@ impl DeckActor {
           },
           Err(streamdeck::Error::NoData) => {},
           _ => {
-            println!("Device disconnectd");
+            h2.send(Disconnect(devid)).await.unwrap();
             break;
           }
         }
+        actix_rt::time::sleep(Duration::from_nanos(10)).await;
       }
     });
 
