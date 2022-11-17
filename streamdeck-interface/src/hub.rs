@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use actix::{Actor, Handler, Message};
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::{DeckActor, Ping, ChangeBrightness}, deckactor::ButtonChange};
+use crate::{deckactor::{DeckActor, Ping}, deckactor::{ButtonChange, MsgType}};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -16,6 +16,10 @@ pub struct Connect {
     hub: actix::Addr<DeckHub>,
     deck: StreamDeck,
 }
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct Broadcast(pub MsgType);
 
 impl Connect {
     pub fn new(devid: u16, hub: actix::Addr<DeckHub>, deck: StreamDeck) -> Self {
@@ -57,17 +61,15 @@ impl Handler<Connect> for DeckHub {
     }
 }
 
-impl Handler<Ping> for DeckHub {
-    type Result = usize;
+impl Handler<Broadcast> for DeckHub {
+    type Result = ();
 
-    fn handle(&mut self, msg: Ping, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: Broadcast, _ctx: &mut Self::Context) -> Self::Result {
 
-        // loop over connected devices
         for addr in self.connected_devices.values() {
             // send the message to the actor
-            addr.do_send(msg.clone());
+            addr.do_send(msg.0.clone());
         }
-        1
     }
 }
 
@@ -87,7 +89,7 @@ impl Handler<ButtonChange> for DeckHub {
 
         // Send a message to all connected devices
         for addr in self.connected_devices.values() {
-            addr.do_send(ChangeBrightness(b * 20));
+            addr.do_send(MsgType::BrightnessChange(b * 20));
         }
         1
     }

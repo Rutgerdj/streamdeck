@@ -6,10 +6,10 @@ use actix::Actor;
 use actix_rt;
 use hidapi::HidApi;
 use streamdeck_interface::connectionmanager::ConnectionManager;
-use streamdeck_interface::deckactor::Ping;
+use streamdeck_interface::deckactor::{Ping, MsgType};
 // use streamdeck_interface::deckmanager::DeckManager;
 use streamdeck_interface::deckstate::{self, DeckAction, DeckButton, DeckHandler, DeckState};
-use streamdeck_interface::hub::DeckHub;
+use streamdeck_interface::hub::{DeckHub, Broadcast};
 use tokio;
 
 #[actix_rt::main]
@@ -40,7 +40,7 @@ async fn main() {
     cm.start();
 
     loop {
-        let res = hub.send(Ping(10)).await;
+        let _res = hub.send(Broadcast(MsgType::Ping(10))).await;
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }

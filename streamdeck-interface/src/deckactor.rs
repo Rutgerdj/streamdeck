@@ -40,16 +40,12 @@ impl Actor for WriterActor {
 pub struct WriteMsg(MsgType);
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Message)]
+#[rtype(result = "()")]
 pub enum MsgType {
-    Ping2(usize),
+    Ping(usize),
     BrightnessChange(u8)
 }
-
-#[derive(Message, Clone)]
-#[rtype(result = "{}")]
-pub struct ChangeBrightness(pub u8);
-
 
 #[derive(Message, Clone)]
 #[rtype(result = " Vec<MsgType>")]
@@ -97,22 +93,12 @@ impl Actor for DeckActor {
     }
 }
 
-impl Handler<ChangeBrightness> for DeckActor {
+impl Handler<MsgType> for DeckActor {
     type Result = ();
 
-    fn handle(&mut self, msg: ChangeBrightness, _ctx: &mut Self::Context)  {
-        println!("[{}]: received Brightness change({})", self.devid, msg.0);
-        let f = self.wa.do_send(WriteMsg(MsgType::BrightnessChange(msg.0.into())));
-    }
-}
-
-impl Handler<Ping> for DeckActor {
-    type Result = usize;
-
-    fn handle(&mut self, msg: Ping, _ctx: &mut Self::Context) -> Self::Result {
-        println!("[{}]: received Ping({})", self.devid, msg.0);
-        let f = self.wa.do_send(WriteMsg(MsgType::Ping2(msg.0.into())));
-        msg.0
+    fn handle(&mut self, msg: MsgType, _ctx: &mut Self::Context) -> Self::Result {
+        println!("[{}]: received msg({:?})", self.devid, msg);
+        self.wa.do_send(WriteMsg(msg));
     }
 }
 
@@ -123,7 +109,7 @@ impl DeckActor {
         let wa2 = wa.clone();
         actix_rt::spawn(async move {
             let mut prev_btn_state = vec![0; 16];
-            // let mut wa = wa.clone();
+
             loop {
                 match deck.read_buttons(Some(Duration::from_millis(10))) {
                     Ok(btns) => {
@@ -141,18 +127,19 @@ impl DeckActor {
                     }
                 }
 
+                // Check if there are any tasks sent to the deck
                 if let Ok(tasks) = wa2.send(GetTasks()).await {
-                    if tasks.len() > 0 {
-                        println!("Tasks: {:?}", tasks);
-                        for t in tasks {
-                            match t {
-                                MsgType::Ping2(i) => {
-                                    println!("Ping: {}", i);
-                                }
-                                MsgType::BrightnessChange(i) => {
-                                    println!("Brightness: {}", i);
-                                    deck.set_brightness(i);
-                                }
+                    if tasks.is_empty() { continue; }
+
+                    println!("Tasks: {:?}", tasks);
+                    for t in tasks {
+                        match t {
+                            MsgType::Ping(i) => {
+                                println!("Ping: {}", i);
+                            }
+                            MsgType::BrightnessChange(i) => {
+                                println!("Brightness: {}", i);
+                                deck.set_brightness(i);
                             }
                         }
                     }
