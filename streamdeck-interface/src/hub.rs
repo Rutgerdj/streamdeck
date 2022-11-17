@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use actix::{Actor, Handler, Message};
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::{DeckActor, Ping, ChangeBrightness}, deckinterface::ButtonChange};
+use crate::{deckactor::{DeckActor, Ping, ChangeBrightness}, deckactor::ButtonChange};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
