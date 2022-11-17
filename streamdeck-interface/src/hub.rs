@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use actix::{Actor, Handler, Message};
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::DeckActor, deckinterface::ButtonChange};
+use crate::{deckactor::{DeckActor, Ping, ChangeBrightness}, deckinterface::ButtonChange};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -57,6 +57,21 @@ impl Handler<Connect> for DeckHub {
     }
 }
 
+impl Handler<Ping> for DeckHub {
+    type Result = usize;
+
+    fn handle(&mut self, msg: Ping, _ctx: &mut Self::Context) -> Self::Result {
+
+        // loop over connected devices
+        for addr in self.connected_devices.values() {
+            // send the message to the actor
+            addr.do_send(msg.clone());
+        }
+        1
+    }
+}
+
+
 impl Handler<ButtonChange> for DeckHub {
     type Result = usize;
 
@@ -65,7 +80,15 @@ impl Handler<ButtonChange> for DeckHub {
             "[DeckHub]: received ButtonChange({}, {:?})",
             msg.btn, msg.state
         );
+        let mut b = msg.btn.try_into().unwrap();
+        if b > 4 {
+            b = 4;
+        }
 
+        // Send a message to all connected devices
+        for addr in self.connected_devices.values() {
+            addr.do_send(ChangeBrightness(b * 20));
+        }
         1
     }
 }
@@ -73,7 +96,11 @@ impl Handler<ButtonChange> for DeckHub {
 impl Handler<Disconnect> for DeckHub {
     type Result = bool;
 
-    fn handle(&mut self, msg: Disconnect, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
+        println!(
+            "[DeckHub]: received Disconnect({})",
+            msg.0
+        );
         if let Some(_) = self.connected_devices.get(&msg.0) {
             self.connected_devices.remove(&msg.0);
             return true;

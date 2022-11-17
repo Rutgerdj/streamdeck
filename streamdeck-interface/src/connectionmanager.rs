@@ -34,7 +34,7 @@ impl ConnectionManager {
                         // Skip devices that are not Elgato devices
                         continue;
                     }
-                    println!("Found device: {:?}", dev.product_string());
+                    println!("[CM]: {:?}", dev.product_string());
                     let pid = dev.product_id();
 
                     if prev_connected.contains(&pid) {
