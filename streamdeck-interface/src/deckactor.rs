@@ -123,7 +123,7 @@ impl DeckActor {
         let wa2 = wa.clone();
         actix_rt::spawn(async move {
             let mut prev_btn_state = vec![0; 16];
-            let mut wa = wa2;
+            // let mut wa = wa.clone();
             loop {
                 match deck.read_buttons(Some(Duration::from_millis(10))) {
                     Ok(btns) => {
@@ -141,7 +141,7 @@ impl DeckActor {
                     }
                 }
 
-                if let Ok(tasks) = wa.send(GetTasks()).await {
+                if let Ok(tasks) = wa2.send(GetTasks()).await {
                     if tasks.len() > 0 {
                         println!("Tasks: {:?}", tasks);
                         for t in tasks {

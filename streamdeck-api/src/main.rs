@@ -8,9 +8,7 @@ use hidapi::HidApi;
 use streamdeck_interface::connectionmanager::ConnectionManager;
 use streamdeck_interface::deckactor::Ping;
 // use streamdeck_interface::deckmanager::DeckManager;
-use streamdeck_interface::deckstate::{
-    self, DeckAction, DeckButton, DeckHandler, DeckState,
-};
+use streamdeck_interface::deckstate::{self, DeckAction, DeckButton, DeckHandler, DeckState};
 use streamdeck_interface::hub::DeckHub;
 use tokio;
 
@@ -36,7 +34,6 @@ async fn main() {
     // }
     // println!("Pressing btn");
     // dh.handle_btn_press(0);
-
 
     let cm = ConnectionManager::new(hub.clone(), api);
 
