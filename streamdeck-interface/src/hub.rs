@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use actix::{Actor, Handler, Message};
+use actix::{Actor, Handler, Message, AsyncContext};
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::{DeckActor, Ping}, deckactor::{ButtonChange, MsgType}};
+use crate::{deckactor::{DeckActor, Ping}, deckactor::{ButtonChange, MsgType}, deckstate::DeckHandler};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -29,6 +29,7 @@ impl Connect {
 
 pub struct DeckHub {
     connected_devices: HashMap<u16, actix::Addr<DeckActor>>,
+    state: DeckHandler,
 }
 
 impl Actor for DeckHub {
@@ -36,9 +37,10 @@ impl Actor for DeckHub {
 }
 
 impl DeckHub {
-    pub fn new() -> Self {
+    pub fn new(state: DeckHandler) -> Self {
         DeckHub {
             connected_devices: HashMap::new(),
+            state: state
         }
     }
 }
@@ -86,11 +88,13 @@ impl Handler<ButtonChange> for DeckHub {
         if b > 4 {
             b = 4;
         }
+        let addr = _ctx.address();
+        self.state.handle_btn_press(msg.clone(), &addr);
 
-        // Send a message to all connected devices
-        for addr in self.connected_devices.values() {
-            addr.do_send(MsgType::BrightnessChange(b * 20));
-        }
+        // // Send a message to all connected devices
+        // for addr in self.connected_devices.values() {
+        //     addr.do_send(MsgType::BrightnessChange(b * 20));
+        // }
         1
     }
 }

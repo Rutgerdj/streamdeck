@@ -1,17 +1,26 @@
 use std::collections::HashMap;
 
+use actix::Addr;
+
+use crate::{hub::{DeckHub, Broadcast}, deckactor::{ButtonChange, MsgType, ButtonState}};
+
 pub struct DeckHandler {
   pub deck_states: HashMap<u32, DeckState>,
   pub active_state: u32,
-
 }
 
 impl DeckHandler {
-  pub fn handle_btn_press(&mut self, btn_id: u16) -> Option<bool> {
+  pub fn handle_btn_press(&mut self, press: ButtonChange, addr: &Addr<DeckHub>) -> Option<bool> {
+    if let ButtonState::Pressed = press.state{
+        return None;
+    }
     println!("Active state = {}", self.active_state);
+
     let state = self.deck_states.get(&self.active_state)?;
-    let btn = state.btns.get(&btn_id)?;
-    let f = btn.action.execute()(self, 1);
+    let btn = state.btns.get(&(press.btn as u16))?;
+
+    btn.action.execute( &addr, 1)(self);
+
     println!("Active state = {}", self.active_state);
     None
   }
@@ -45,14 +54,29 @@ pub struct DeckButton {
 pub enum DeckAction {
   NextState,
   PrevState,
+  DeckMsg(MsgType),
 }
 
 impl DeckAction {
-  pub fn execute(&self) -> impl Fn(&mut DeckHandler, u32) -> i32 {
-    return |x, i| {
-      println!("NextState");
-      x.active_state = i;
-      1
+  pub fn execute(&self, addr: &Addr<DeckHub>, v: u32) -> Box<dyn FnMut(&mut DeckHandler) -> ()> {
+    let mut f = Box::new(|dh: &mut DeckHandler| {});
+
+    match &self {
+        DeckAction::DeckMsg(msg) => {
+            let _res = addr.do_send(Broadcast(msg.clone()));
+        },
+        DeckAction::NextState => {
+            return Box::new(|dh: &mut DeckHandler| {
+                dh.active_state += 1;
+                if dh.active_state > 1 {
+                    dh.active_state = 0;
+                }
+            });
+        }
+        DeckAction::PrevState => {
+        },
     };
+
+    f
   }
 }

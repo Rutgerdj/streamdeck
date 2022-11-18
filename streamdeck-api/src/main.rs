@@ -16,8 +16,37 @@ use tokio;
 async fn main() {
     let api = HidApi::new().unwrap();
 
-    let hub = DeckHub::new().start();
+    let mut state = DeckState::new();
+    state.btns.insert(0, DeckButton {
+        action: DeckAction::DeckMsg(MsgType::BrightnessChange(0)),
+    });
+    state.btns.insert(1, DeckButton {
+        action: DeckAction::DeckMsg(MsgType::BrightnessChange(100)),
+    });
+    state.btns.insert(2, DeckButton {
+        action: DeckAction::NextState,
+    });
 
+    let mut state2 = DeckState::new();
+    state2.btns.insert(0, DeckButton {
+        action: DeckAction::DeckMsg(MsgType::BrightnessChange(100)),
+    });
+    state2.btns.insert(1, DeckButton {
+        action: DeckAction::DeckMsg(MsgType::BrightnessChange(0)),
+    });
+    state2.btns.insert(2, DeckButton {
+        action: DeckAction::NextState,
+    });
+
+
+
+    let mut handler = DeckHandler::new();
+    handler.active_state = 0;
+    handler.deck_states.insert(0, state);
+    handler.deck_states.insert(1, state2);
+
+    let hub = DeckHub::new(handler).start();
+    
     // let mut btns = HashMap::new();
     // btns.insert(
     //     0,
@@ -40,7 +69,7 @@ async fn main() {
     cm.start();
 
     loop {
-        let _res = hub.send(Broadcast(MsgType::Ping(10))).await;
+        // let _res = hub.send(Broadcast(MsgType::Ping(10))).await;
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }
