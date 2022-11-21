@@ -14,14 +14,12 @@ impl DeckHandler {
     if let ButtonState::Pressed = press.state{
         return None;
     }
-    println!("Active state = {}", self.active_state);
 
-    let state = self.deck_states.get(&self.active_state)?;
-    let btn = state.btns.get(&(press.btn as u16))?;
+    let state = self.deck_states.get_mut(&self.active_state)?;
+    let btn = state.btns.get(&(press.btn as u16))?.clone();
 
-    btn.action.execute( &addr, 1)(self);
+    btn.action.execute(addr, self);
 
-    println!("Active state = {}", self.active_state);
     None
   }
 
@@ -33,8 +31,14 @@ impl DeckHandler {
   }
 }
 
+impl Default for DeckHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct DeckState {
-  pub btns: HashMap<u16, DeckButton>, 
+  pub btns: HashMap<u16, DeckButton>,
 }
 
 impl DeckState {
@@ -43,6 +47,12 @@ impl DeckState {
       btns: HashMap::new(),
     }
   }
+}
+
+impl Default for DeckState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Clone)]
@@ -58,25 +68,19 @@ pub enum DeckAction {
 }
 
 impl DeckAction {
-  pub fn execute(&self, addr: &Addr<DeckHub>, v: u32) -> Box<dyn FnMut(&mut DeckHandler) -> ()> {
-    let mut f = Box::new(|dh: &mut DeckHandler| {});
-
+  pub fn execute(&self, addr: &Addr<DeckHub>, dh: &mut DeckHandler) {
     match &self {
         DeckAction::DeckMsg(msg) => {
-            let _res = addr.do_send(Broadcast(msg.clone()));
+            addr.do_send(Broadcast(msg.clone()));
         },
         DeckAction::NextState => {
-            return Box::new(|dh: &mut DeckHandler| {
-                dh.active_state += 1;
-                if dh.active_state > 1 {
-                    dh.active_state = 0;
-                }
-            });
+          dh.active_state+=1 ;
+          if dh.active_state > 1 {
+            dh.active_state = 0;
+          }
         }
         DeckAction::PrevState => {
         },
     };
-
-    f
   }
 }
