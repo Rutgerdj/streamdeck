@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use actix::{Actor, Handler, Message, AsyncContext};
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::{DeckActor, Ping}, deckactor::{ButtonChange, MsgType}, deckstate::DeckHandler};
+use crate::{deckactor::DeckActor, deckactor::{ButtonChange, MsgType}, deckstate::DeckHandler};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -40,7 +40,7 @@ impl DeckHub {
     pub fn new(state: DeckHandler) -> Self {
         DeckHub {
             connected_devices: HashMap::new(),
-            state: state
+            state
         }
     }
 }
@@ -84,12 +84,9 @@ impl Handler<ButtonChange> for DeckHub {
             "[DeckHub]: received ButtonChange({}, {:?})",
             msg.btn, msg.state
         );
-        let mut b = msg.btn.try_into().unwrap();
-        if b > 4 {
-            b = 4;
-        }
+
         let addr = _ctx.address();
-        self.state.handle_btn_press(msg.clone(), &addr);
+        self.state.handle_btn_press(msg, &addr);
 
         // // Send a message to all connected devices
         // for addr in self.connected_devices.values() {
@@ -107,7 +104,7 @@ impl Handler<Disconnect> for DeckHub {
             "[DeckHub]: received Disconnect({})",
             msg.0
         );
-        if let Some(_) = self.connected_devices.get(&msg.0) {
+        if self.connected_devices.get(&msg.0).is_some() {
             self.connected_devices.remove(&msg.0);
             return true;
         }

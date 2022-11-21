@@ -62,7 +62,7 @@ impl Handler<WriteMsg> for WriterActor {
 impl Handler<GetTasks> for WriterActor {
     type Result = Vec<MsgType>;
 
-    fn handle(&mut self, msg: GetTasks, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, _msg: GetTasks, _ctx: &mut Self::Context) -> Self::Result {
         let res = self.action.clone();
         self.action = Vec::new();
         res
@@ -83,11 +83,11 @@ pub struct Ping(pub usize);
 impl Actor for DeckActor {
     type Context = actix::Context<Self>;
 
-    fn started(&mut self, ctx: &mut Self::Context) {
+    fn started(&mut self, _ctx: &mut Self::Context) {
         println!("[DeckActor::{}] Started", self.devid);
     }
 
-    fn stopping(&mut self, ctx: &mut Self::Context) -> actix::Running {
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
         println!("Stopping");
         actix::Running::Stop
     }
@@ -139,12 +139,12 @@ impl DeckActor {
                             }
                             MsgType::BrightnessChange(i) => {
                                 println!("Brightness: {}", i);
-                                deck.set_brightness(i);
+                                let _ = deck.set_brightness(i);
                             }
                         }
                     }
                 }
-                
+
                 actix_rt::time::sleep(Duration::from_nanos(10)).await;
             }
         });
@@ -152,7 +152,7 @@ impl DeckActor {
         DeckActor { devid, hub, wa }
     }
 
-    fn state_change(prev: &Vec<u8>, curr: &Vec<u8>) -> Vec<ButtonChange> {
+    fn state_change(prev: &[u8], curr: &Vec<u8>) -> Vec<ButtonChange> {
         let mut changes = vec![];
         for ((i, p), c) in prev.iter().enumerate().zip(curr) {
             if p != c {
