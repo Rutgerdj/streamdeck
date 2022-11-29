@@ -26,7 +26,7 @@ impl ConnectionManager {
 
             loop {
                 let mut now_connected: HashSet<u16> = HashSet::new();
-                println!("[CM] Checking for new devices...");
+                log::info!("Checking for new devices...");
 
                 let _ = api.refresh_devices();
                 for dev in api.device_list() {

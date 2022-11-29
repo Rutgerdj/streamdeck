@@ -80,7 +80,7 @@ impl Handler<ButtonChange> for DeckHub {
     type Result = usize;
 
     fn handle(&mut self, msg: ButtonChange, _ctx: &mut Self::Context) -> Self::Result {
-        println!(
+        log::info!(
             "[DeckHub]: received ButtonChange({}, {:?})",
             msg.btn, msg.state
         );
@@ -88,10 +88,6 @@ impl Handler<ButtonChange> for DeckHub {
         let addr = _ctx.address();
         self.state.handle_btn_press(msg, &addr);
 
-        // // Send a message to all connected devices
-        // for addr in self.connected_devices.values() {
-        //     addr.do_send(MsgType::BrightnessChange(b * 20));
-        // }
         1
     }
 }
@@ -100,7 +96,7 @@ impl Handler<Disconnect> for DeckHub {
     type Result = bool;
 
     fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
-        println!(
+        log::info!(
             "[DeckHub]: received Disconnect({})",
             msg.0
         );

@@ -84,11 +84,11 @@ impl Actor for DeckActor {
     type Context = actix::Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("[DeckActor::{}] Started", self.devid);
+        log::info!("{} Started", self.devid);
     }
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> actix::Running {
-        println!("Stopping");
+        log::info!("{} Stopped", self.devid);
         actix::Running::Stop
     }
 }
@@ -96,8 +96,8 @@ impl Actor for DeckActor {
 impl Handler<MsgType> for DeckActor {
     type Result = ();
 
-    fn handle(&mut self, msg: MsgType, _ctx: &mut Self::Context) -> Self::Result {
-        println!("[{}]: received msg({:?})", self.devid, msg);
+    fn handle(&mut self, msg: MsgType, ctx: &mut Self::Context) -> Self::Result {
+        log::info!("[{}]: received msg({:?})", self.devid, msg);
         self.wa.do_send(WriteMsg(msg));
     }
 }
@@ -131,14 +131,14 @@ impl DeckActor {
                 if let Ok(tasks) = wa2.send(GetTasks()).await {
                     if tasks.is_empty() { continue; }
 
-                    println!("Tasks: {:?}", tasks);
+                    log::info!("Tasks: {:?}", tasks);
                     for t in tasks {
                         match t {
                             MsgType::Ping(i) => {
-                                println!("Ping: {}", i);
+                                log::info!("Ping: {}", i);
                             }
                             MsgType::BrightnessChange(i) => {
-                                println!("Brightness: {}", i);
+                                log::info!("Brightness: {}", i);
                                 let _ = deck.set_brightness(i);
                             }
                         }

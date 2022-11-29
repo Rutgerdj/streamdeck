@@ -9,6 +9,9 @@ use streamdeck_interface::hub::DeckHub;
 
 #[actix_rt::main]
 async fn main() {
+    dotenv::dotenv().ok();
+    env_logger::init();
+
     let api = HidApi::new().unwrap();
 
     let mut state = DeckState::new();
@@ -81,6 +84,6 @@ async fn main() {
 
     loop {
         // let _res = hub.send(Broadcast(MsgType::Ping(10))).await;
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        actix_rt::time::sleep(Duration::from_secs(5)).await;
     }
 }
