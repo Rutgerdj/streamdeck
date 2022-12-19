@@ -1,0 +1,172 @@
+{
+  "0": {
+    "btns": {
+      "9": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              9,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "8": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              8,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "10": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              10,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "4": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              4,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "1": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              1,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "3": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              3,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "5": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              5,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "11": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              11,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "12": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              12,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "6": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              6,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "13": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              13,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "7": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              7,
+              "2.png"
+            ]
+          }
+        }
+      },
+      "14": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              14,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "2": {
+        "action": {
+          "DeckMsg": {
+            "SetImage": [
+              2,
+              "1.png"
+            ]
+          }
+        }
+      },
+      "0": {
+        "action": {
+          "DeckMsg": "Reset"
+        }
+      }
+    }
+  },
+  "1": {
+    "btns": {
+      "1": {
+        "action": {
+          "DeckMsg": {
+            "BrightnessChange": 0
+          }
+        }
+      },
+      "2": {
+        "action": "NextState"
+      },
+      "0": {
+        "action": {
+          "DeckMsg": {
+            "BrightnessChange": 100
+          }
+        }
+      }
+    }
+  }
+}
