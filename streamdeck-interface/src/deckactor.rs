@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use actix::{Actor, Handler, Message};
+use serde::{Deserialize, Serialize};
 use streamdeck::StreamDeck;
 
 use crate::{
@@ -40,15 +41,17 @@ impl Actor for WriterActor {
 pub struct WriteMsg(MsgType);
 
 
-#[derive(Clone, Debug, Message)]
+#[derive(Clone, Debug, Message, Deserialize, Serialize)]
 #[rtype(result = "()")]
 pub enum MsgType {
     Ping(usize),
-    BrightnessChange(u8)
+    BrightnessChange(u8),
+    SetImage(u8, String),
+    Reset,
 }
 
 #[derive(Message, Clone)]
-#[rtype(result = " Vec<MsgType>")]
+#[rtype(result = "Vec<MsgType>")]
 pub struct GetTasks();
 
 impl Handler<WriteMsg> for WriterActor {
@@ -96,7 +99,7 @@ impl Actor for DeckActor {
 impl Handler<MsgType> for DeckActor {
     type Result = ();
 
-    fn handle(&mut self, msg: MsgType, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: MsgType, _ctx: &mut Self::Context) -> Self::Result {
         log::info!("[{}]: received msg({:?})", self.devid, msg);
         self.wa.do_send(WriteMsg(msg));
     }
@@ -110,8 +113,8 @@ impl DeckActor {
         actix_rt::spawn(async move {
             let mut prev_btn_state = vec![0; 16];
 
-            loop {
-                match deck.read_buttons(Some(Duration::from_millis(10))) {
+            'checkevents: loop {
+                match deck.read_buttons(Some(Duration::from_millis(100))) {
                     Ok(btns) => {
                         let change = Self::state_change(&prev_btn_state, &btns);
 
@@ -123,9 +126,9 @@ impl DeckActor {
                     Err(streamdeck::Error::NoData) => {}
                     _ => {
                         h2.send(Disconnect(devid)).await.unwrap();
-                        break;
+                        break 'checkevents;
                     }
-                }
+                };
 
                 // Check if there are any tasks sent to the deck
                 if let Ok(tasks) = wa2.send(GetTasks()).await {
@@ -140,12 +143,26 @@ impl DeckActor {
                             MsgType::BrightnessChange(i) => {
                                 log::info!("Brightness: {}", i);
                                 let _ = deck.set_brightness(i);
+                            },
+                            MsgType::SetImage(key, path) => {
+                                let opts = streamdeck::images::ImageOptions::default();
+                                let path = format!("../images/{}", path);
+                                let img = deck.load_image(&path, &opts).unwrap();
+                                if let Err(e) = deck.write_button_image(key, &img) {
+                                    log::error!("Error writing image: {}", e);
+                                    h2.send(Disconnect(devid)).await.unwrap();
+                                    break 'checkevents;
+                                }
+                            },
+                            MsgType::Reset => {
+                                let _ = deck.reset();
                             }
+                            
                         }
                     }
                 }
 
-                actix_rt::time::sleep(Duration::from_nanos(10)).await;
+                actix_rt::time::sleep(Duration::from_nanos(100)).await;
             }
         });
 

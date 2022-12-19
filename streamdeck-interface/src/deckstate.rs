@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use actix::Addr;
+use serde::{Deserialize, Serialize};
 
 use crate::{hub::{DeckHub, Broadcast}, deckactor::{ButtonChange, MsgType, ButtonState}};
 
@@ -11,7 +12,7 @@ pub struct DeckHandler {
 
 impl DeckHandler {
   pub fn handle_btn_press(&mut self, press: ButtonChange, addr: &Addr<DeckHub>) -> Option<bool> {
-    if let ButtonState::Pressed = press.state{
+    if let ButtonState::Released = press.state{
         return None;
     }
 
@@ -23,20 +24,37 @@ impl DeckHandler {
     None
   }
 
-  pub fn new() -> Self {
+  pub fn new(deck_states: HashMap<u32, DeckState>) -> Self {
     DeckHandler {
-      deck_states: HashMap::new(),
+      deck_states,
       active_state: 0,
+    }
+  }
+
+  pub fn save(&self) {
+    if let Ok(s) = serde_json::to_string_pretty(&self.deck_states) {
+      // Write to file
+      let _ = std::fs::write("deck_states.json", s);
+    }
+  }
+
+  pub fn load() -> Self {
+    if let Ok(s) = std::fs::read_to_string("deck_states.json") {
+      let deck_states: HashMap<u32, DeckState> = serde_json::from_str(&s).unwrap();
+      Self::new(deck_states)
+    } else {
+      Self::default()
     }
   }
 }
 
 impl Default for DeckHandler {
     fn default() -> Self {
-        Self::new()
+        Self::new(HashMap::new())
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct DeckState {
   pub btns: HashMap<u16, DeckButton>,
 }
@@ -55,12 +73,12 @@ impl Default for DeckState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct DeckButton {
   pub action: DeckAction,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum DeckAction {
   NextState,
   PrevState,

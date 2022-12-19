@@ -7,9 +7,10 @@ edition = "2021"
 
 [dependencies]
 streamdeck = "0.7.0"
-hidapi = "1.4.1"
-tokio = { version = "1.19.2", features = ["full"] }
+hidapi = "1.5.0"
 actix="0.13.0"
 actix-rt="2.7.0"
-env_logger = "0.9.3"
+env_logger = "0.10.0"
 log = "0.4.17"
+serde = {version = "1.0.151", features = ["derive"]}
+serde_json = "1.0.91"
