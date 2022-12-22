@@ -8,7 +8,12 @@ edition = "2021"
 [dependencies]
 streamdeck-interface = { path="../streamdeck-interface/", version="0.1.0" }
 hidapi = "1.4.1"
-actix = "0.13.0"
-actix-rt="2.7.0"
+log = "0.4.17"
 env_logger = "0.10.0"
 dotenv = "0.15.0"
+
+actix = "0.13.0"
+actix-rt="2.7.0"
+actix-web = "4.0.1"
+actix-web-actors = "4.1.0"
+rand = "0.8.5"
