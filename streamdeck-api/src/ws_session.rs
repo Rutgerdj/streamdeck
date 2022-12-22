@@ -1,29 +1,43 @@
-use std::time::{Duration, Instant};
-use actix::{fut, Running, Actor, AsyncContext, StreamHandler, ActorContext, Handler, Addr, WrapFuture, ActorFutureExt, ContextFutureSpawner};
+use actix::{
+    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
+    Message, Running, StreamHandler, WrapFuture,
+};
 use actix_web_actors::ws;
-use streamdeck_interface::hub::{DeckHub, HubMessage};
-
-use crate::server::{Server, WsMessage};
-
-
+use rand::Rng;
+use std::time::{Duration, Instant};
+use streamdeck_interface::{
+    deckactor::MsgType,
+    hub::{Broadcast, DeckHub, HubMessage, ListenerEvent},
+};
 
 pub type SessionId = usize;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct WsMessage {
+    pub msg: String,
+}
 
 #[derive(Debug)]
 pub struct WsSession {
-    /// unique session id
     pub id: SessionId,
 
     pub hb: Instant,
 
-    pub server: Addr<Server>,
-
-    pub i: Instant
+    pub hub: Addr<DeckHub>,
 }
 
+impl WsSession {
+    pub fn new(hub: Addr<DeckHub>) -> Self {
+        WsSession {
+            id: rand::thread_rng().gen::<usize>(),
+            hb: Instant::now(),
+            hub,
+        }
+    }
+}
 
 impl WsSession {
     /// helper method that sends ping to client every second.
@@ -35,7 +49,7 @@ impl WsSession {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
                 println!("Websocket Client heartbeat failed, disconnecting!");
-                
+
                 // stop actor
                 ctx.stop();
 
@@ -47,7 +61,6 @@ impl WsSession {
     }
 }
 
-
 impl Actor for WsSession {
     type Context = ws::WebsocketContext<Self>;
 
@@ -57,15 +70,16 @@ impl Actor for WsSession {
         self.hb(ctx);
         let addr = ctx.address();
 
-        self.server
-            .send(crate::server::Connect {
-                addr: addr.clone(),
-            })
+        self.hub
+            .send(ListenerEvent::Connect(
+                self.id,
+                addr.recipient::<HubMessage>(),
+            ))
             .into_actor(self)
             .then(move |res, act, ctx| {
                 match res {
-                    Ok(res) => act.id = res,
-                    // something is wrong with server
+                    Ok(res) => {}
+                    // something is wrong with DeckHub
                     _ => ctx.stop(),
                 }
                 fut::ready(())
@@ -77,10 +91,7 @@ impl Actor for WsSession {
         log::info!("WS Server Stopping");
         Running::Stop
     }
-    
 }
-
-
 
 /// WebSocket message handler
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
@@ -107,18 +118,20 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
                 let parts = m.split_ascii_whitespace().collect::<Vec<&str>>();
                 match *parts {
                     ["b", x] => {
-                        log::info!("Sending");
-                        self.server.do_send(WsMessage {msg: x.to_owned()});
-                        log::info!("Sent!");
+                        if let Ok(x) = x.parse::<u8>() {
+                            self.hub.do_send(Broadcast(MsgType::BrightnessChange(x)));
+                        }
                     }
                     _ => {}
                 }
             }
             ws::Message::Close(reason) => {
+                self.hub.do_send(ListenerEvent::Disconnect(self.id));
                 ctx.close(reason);
                 ctx.stop();
             }
             ws::Message::Continuation(_) => {
+                self.hub.do_send(ListenerEvent::Disconnect(self.id));
                 ctx.stop();
             }
             _ => (),
@@ -139,15 +152,5 @@ impl Handler<HubMessage> for WsSession {
 
     fn handle(&mut self, msg: HubMessage, ctx: &mut Self::Context) -> Self::Result {
         ctx.text(msg.0);
-    }
-}
-
-
-impl Handler<crate::server::Connect> for DeckHub {
-    type Result = SessionId;
-
-    fn handle(&mut self, msg: crate::server::Connect, _: &mut Self::Context) -> Self::Result {
-
-        1
     }
 }

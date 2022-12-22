@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    time::Duration,
-};
+use std::{collections::HashSet, time::Duration};
 
 use actix::Actor;
 use hidapi::HidApi;

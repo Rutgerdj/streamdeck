@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use actix::{Actor, Addr};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
@@ -9,7 +7,6 @@ use streamdeck_interface::deckstate::DeckHandler;
 use streamdeck_interface::hub::DeckHub;
 
 mod ws_session;
-mod server;
 
 #[actix_rt::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -26,11 +23,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     cm.start();
 
-    let srv = server::Server::new(hub.clone()).start();
-
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(srv.clone()))
+            .app_data(web::Data::new(hub.clone()))
             .route("/ws", web::get().to(ws_upgrade))
     })
     .disable_signals()
@@ -44,17 +39,10 @@ async fn main() -> Result<(), std::io::Error> {
 async fn ws_upgrade(
     req: HttpRequest,
     stream: web::Payload,
-    srv: web::Data<Addr<server::Server>>,
+    srv: web::Data<Addr<DeckHub>>,
 ) -> Result<HttpResponse, Error> {
-    println!("Resp ");
-    let i = Instant::now();
     ws::start(
-        ws_session::WsSession {
-            id: 0,
-            hb: Instant::now(),
-            server: srv.get_ref().clone(),
-            i
-        },
+        ws_session::WsSession::new(srv.get_ref().clone()),
         &req,
         stream,
     )

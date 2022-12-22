@@ -4,9 +4,7 @@ use actix::{Actor, Handler, Message};
 use serde::{Deserialize, Serialize};
 use streamdeck::StreamDeck;
 
-use crate::{
-    hub::{DeckHub, Disconnect},
-};
+use crate::hub::{DeckHub, Disconnect};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Message)]
 #[rtype(result = "usize")]
@@ -27,7 +25,6 @@ pub enum ButtonState {
     Released,
 }
 
-
 pub struct WriterActor {
     action: Vec<MsgType>,
 }
@@ -39,7 +36,6 @@ impl Actor for WriterActor {
 #[derive(Message, Clone)]
 #[rtype(result = "{}")]
 pub struct WriteMsg(MsgType);
-
 
 #[derive(Clone, Debug, Message, Deserialize, Serialize)]
 #[rtype(result = "()")]
@@ -133,7 +129,9 @@ impl DeckActor {
 
                 // Check if there are any tasks sent to the deck
                 if let Ok(tasks) = wa2.send(GetTasks()).await {
-                    if tasks.is_empty() { continue; }
+                    if tasks.is_empty() {
+                        continue;
+                    }
 
                     log::info!("Tasks: {:?}", tasks);
                     for t in tasks {
@@ -144,7 +142,7 @@ impl DeckActor {
                             MsgType::BrightnessChange(i) => {
                                 log::info!("Brightness: {}", i);
                                 let _ = deck.set_brightness(i);
-                            },
+                            }
                             MsgType::SetImage(key, path) => {
                                 let opts = streamdeck::images::ImageOptions::default();
                                 let path = format!("../images/{}", path);
@@ -154,16 +152,13 @@ impl DeckActor {
                                     h2.send(Disconnect(devid)).await.unwrap();
                                     break 'checkevents;
                                 }
-                            },
+                            }
                             MsgType::Reset => {
                                 let _ = deck.reset();
                             }
-                            
                         }
                     }
                 }
-
-                
             }
         });
 

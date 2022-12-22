@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 
-use actix::{Actor, Handler, Message, AsyncContext, Recipient};
+use actix::{Actor, AsyncContext, Handler, Message, Recipient};
 use rand::Rng;
 use streamdeck::StreamDeck;
 
-use crate::{deckactor::DeckActor, deckactor::{ButtonChange, MsgType}, deckstate::DeckHandler};
+use crate::{
+    deckactor::DeckActor,
+    deckactor::{ButtonChange, MsgType},
+    deckstate::DeckHandler,
+};
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -22,10 +26,12 @@ pub struct Connect {
 #[rtype(result = "()")]
 pub struct HubMessage(pub String);
 
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct AddListener(pub usize, pub Recipient<HubMessage>);
-
+pub enum ListenerEvent {
+    Connect(usize, Recipient<HubMessage>),
+    Disconnect(usize),
+}
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -81,7 +87,6 @@ impl Handler<Broadcast> for DeckHub {
     type Result = ();
 
     fn handle(&mut self, msg: Broadcast, _ctx: &mut Self::Context) -> Self::Result {
-
         for addr in self.connected_devices.values() {
             // send the message to the actor
             addr.do_send(msg.0.clone());
@@ -89,18 +94,17 @@ impl Handler<Broadcast> for DeckHub {
     }
 }
 
-
 impl Handler<ButtonChange> for DeckHub {
     type Result = usize;
 
     fn handle(&mut self, msg: ButtonChange, _ctx: &mut Self::Context) -> Self::Result {
         log::info!(
             "[DeckHub]: received ButtonChange({}, {:?})",
-            msg.btn, msg.state
+            msg.btn,
+            msg.state
         );
 
         for dev in self.listeners.values() {
-            
             dev.do_send(HubMessage(format!("Button {} {:?}", msg.btn, msg.state)));
         }
 
@@ -115,10 +119,7 @@ impl Handler<Disconnect> for DeckHub {
     type Result = bool;
 
     fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
-        log::info!(
-            "[DeckHub]: received Disconnect({})",
-            msg.0
-        );
+        log::info!("[DeckHub]: received Disconnect({})", msg.0);
         if self.connected_devices.get(&msg.0).is_some() {
             self.connected_devices.remove(&msg.0);
             for dev in self.listeners.values() {
@@ -131,11 +132,26 @@ impl Handler<Disconnect> for DeckHub {
     }
 }
 
-
-impl Handler<AddListener> for DeckHub {
+impl Handler<ListenerEvent> for DeckHub {
     type Result = ();
 
-    fn handle(&mut self, msg: AddListener, _ctx: &mut Self::Context) -> Self::Result {
-        self.listeners.insert(msg.0, msg.1);
+    fn handle(&mut self, msg: ListenerEvent, _ctx: &mut Self::Context) -> Self::Result {
+        log::info!("Received ListenerEvent: {:?}", msg);
+        match msg {
+            ListenerEvent::Connect(id, addr) => {
+                self.listeners.insert(id, addr);
+            }
+            ListenerEvent::Disconnect(id) => {
+                self.listeners.remove(&id);
+            }
+        }
+    }
+}
+
+impl Handler<HubMessage> for DeckHub {
+    type Result = ();
+
+    fn handle(&mut self, msg: HubMessage, _ctx: &mut Self::Context) -> Self::Result {
+        log::info!("Received HubMessage: {}", msg.0);
     }
 }
