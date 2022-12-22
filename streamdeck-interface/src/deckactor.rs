@@ -114,7 +114,8 @@ impl DeckActor {
             let mut prev_btn_state = vec![0; 16];
 
             'checkevents: loop {
-                match deck.read_buttons(Some(Duration::from_millis(100))) {
+                actix_rt::time::sleep(Duration::from_millis(25)).await;
+                match deck.read_buttons(Some(Duration::from_nanos(100))) {
                     Ok(btns) => {
                         let change = Self::state_change(&prev_btn_state, &btns);
 
@@ -162,7 +163,7 @@ impl DeckActor {
                     }
                 }
 
-                actix_rt::time::sleep(Duration::from_nanos(100)).await;
+                
             }
         });
 
