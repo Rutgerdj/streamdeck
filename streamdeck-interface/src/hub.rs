@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use actix::{Actor, AsyncContext, Handler, Message, Recipient};
-use rand::Rng;
 use streamdeck::StreamDeck;
 
 use crate::{
@@ -22,7 +21,7 @@ pub struct Connect {
     deck: StreamDeck,
 }
 
-#[derive(Message)]
+#[derive(Message, Clone)]
 #[rtype(result = "()")]
 pub struct HubMessage(pub String);
 
@@ -47,7 +46,6 @@ pub struct DeckHub {
     connected_devices: HashMap<u16, actix::Addr<DeckActor>>,
     state: DeckHandler,
     listeners: HashMap<usize, Recipient<HubMessage>>,
-    rng: rand::rngs::ThreadRng,
 }
 
 impl Actor for DeckHub {
@@ -60,7 +58,12 @@ impl DeckHub {
             connected_devices: HashMap::new(),
             state,
             listeners: HashMap::new(),
-            rng: rand::thread_rng(),
+        }
+    }
+
+    pub fn send_to_listeners(&self, msg: HubMessage) {
+        for dev in self.listeners.values() {
+            dev.do_send(msg.clone());
         }
     }
 }
@@ -74,6 +77,8 @@ impl Handler<Connect> for DeckHub {
         if self.connected_devices.contains_key(&msg.devid) {
             return false;
         }
+
+        self.send_to_listeners(HubMessage(format!("Connected {}", msg.devid)));
 
         // Create a new actor and start it
         let addr = DeckActor::new(msg.devid, msg.hub.clone(), msg.deck).start();
@@ -104,9 +109,7 @@ impl Handler<ButtonChange> for DeckHub {
             msg.state
         );
 
-        for dev in self.listeners.values() {
-            dev.do_send(HubMessage(format!("Button {} {:?}", msg.btn, msg.state)));
-        }
+        self.send_to_listeners(HubMessage(format!("Button {} {:?}", msg.btn, msg.state)));
 
         let addr = _ctx.address();
         self.state.handle_btn_press(msg, &addr);
@@ -122,10 +125,7 @@ impl Handler<Disconnect> for DeckHub {
         log::info!("[DeckHub]: received Disconnect({})", msg.0);
         if self.connected_devices.get(&msg.0).is_some() {
             self.connected_devices.remove(&msg.0);
-            for dev in self.listeners.values() {
-                log::info!("Sending disconnect message to listener");
-                dev.do_send(HubMessage("Device disconnected".to_owned()));
-            }
+            self.send_to_listeners(HubMessage(format!("Disconnected {}", msg.0)));
             return true;
         }
         false
